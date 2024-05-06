@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SGH Musculation - Enregistrement</title>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>SGH MUSCULATION</h1>
+
+        <!-- Conteneur pour les options -->
+        <div class="options-container">
+            <!-- Sélectionner un utilisateur existant -->
+            <div id="existingUser">
+                <label for="name">Choisir un utilisateur :</label>
+                <select id="name">
+                    <option value="">Sélectionner votre nom</option>
+                </select>
+            </div>
+
+            <!-- Ajouter un nouvel utilisateur -->
+            <div id="newUser">
+                <label for="newName">Enregistrer un nouvel utilisateur :</label>
+                <input type="text" id="newName" placeholder="Entrez votre nom">
+                <button id="saveUser">Enregistrer</button>
+            </div>
+        </div>
+        <br/><br/>
+
+        <label for="sessionDuration">Durée de la séance (en minutes) :</label>
+        <input type="number" id="sessionDuration" min="0">
+        <br/><br/>
+
+        <button onclick="registerEntry()">Enregistrer</button>
+    </div>
+
+    <script>
+        function loadExistingUsers() {
+    $.ajax({
+        url: 'http://localhost:5000/api/users',
+        type: 'GET',
+        dataType: 'json',
+        success: function(users) {
+            const select = $('#name');
+            select.empty().append('<option value="">Sélectionner votre nom</option>');
+            $.each(users, function(index, user) {
+                select.append('<option value="' + user._id + '">' + user.first_name + ' ' + user.last_name + '</option>');
+            });
+        },
+        error: function(error) {
+            console.error('Erreur lors du chargement des utilisateurs:', error);
+        }
+    });
+}
+
+// Fonction pour enregistrer une nouvelle entrée
+function registerEntry() {
+    // Récupérer l'utilisateur sélectionné ou ajouté
+    const userId = $('#name').val() || '';
+    const newName = $('#newName').val() || '';
+    const sessionDuration = $('#sessionDuration').val();
+
+    // Si un nouvel utilisateur est ajouté, enregistrer l'utilisateur d'abord
+    if (newName && !userId) {
+        $.ajax({
+            url: 'http://localhost:5000/api/users',
+            type: 'POST',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                first_name: newName.split(" ")[0],
+                last_name: newName.split(" ")[1]
+            }),
+            success: function(data) {
+                // Rafraîchir la liste des utilisateurs après l'ajout
+                loadExistingUsers();
+                // Enregistrer l'entrée une fois que l'utilisateur est ajouté
+                saveEntry(data._id);
+            },
+            error: function(error) {
+                console.error('Erreur lors de l\'ajout de l\'utilisateur:', error);
+            }
+        });
+    } else {
+        // Si un utilisateur existant est sélectionné, enregistrer l'entrée directement
+        saveEntry(userId);
+    }
+}
+
+// Fonction pour enregistrer l'entrée dans la base de données
+function saveEntry(userId) {
+    const sessionDuration = $('#sessionDuration').val();
+    $.ajax({
+        url: 'http://localhost:5000/api/entry',
+        type: 'POST',
+        contentType: 'application/json',
+        data: JSON.stringify({
+            user_id: userId,
+            entry_time: new Date().toISOString(),
+            session_duration: sessionDuration
+        }),
+        success: function(data) {
+            console.log('Réponse du serveur:', data);
+            alert('Enregistrement réussi !');
+        },
+        error: function(error) {
+            console.error('Erreur lors de l\'enregistrement:', error);
+            alert('Erreur lors de l\'enregistrement');
+        }
+    });
+        }
+
+        // Charger les utilisateurs existants lors du chargement de la page
+        $(document).ready(function() {
+            loadExistingUsers();
+        });
+
+        // Afficher le champ pour ajouter un nouvel utilisateur si aucune option n'est sélectionnée
+        $('#name').change(function() {
+            if ($(this).val() === '') {
+                $('#existingUser').hide();
+                $('#newUser').show();
+            } else {
+                $('#existingUser').show();
+                $('#newUser').hide();
+            }
+        });
+
+        // Fonction pour enregistrer un nouvel utilisateur
+        function saveNewUser() {
+            const newName = $('#newName').val();
+
+            // Vérifiez si le champ du nouvel utilisateur est vide
+            if (!newName) {
+                alert('Veuillez entrer un nom pour l\'utilisateur.');
+                return;
+            }
+
+            // Envoi de la requête AJAX pour enregistrer le nouvel utilisateur
+            $.ajax({
+                url: 'http://localhost:5000/api/users',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    first_name: newName.split(" ")[0],
+                    last_name: newName.split(" ")[1]
+                }),
+                success: function(data) {
+                    // Rafraîchir la liste des utilisateurs après l'ajout
+                    loadExistingUsers();
+                    // Effacer le champ de texte du nouvel utilisateur
+                    $('#newName').val('');
+                    alert('Utilisateur enregistré avec succès !');
+                },
+                error: function(error) {
+                    console.error('Erreur lors de l\'enregistrement de l\'utilisateur:', error);
+                    alert('Erreur lors de l\'enregistrement de l\'utilisateur');
+                }
+            });
+        }
+
+        // Gestionnaire d'événements pour le bouton "Enregistrer" sous le champ du nouvel utilisateur
+        $('#saveUser').click(function() {
+            saveNewUser();
+        });
+
+    </script>
+</body>
+</html>
